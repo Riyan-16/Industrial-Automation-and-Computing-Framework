@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ironline · Industrial Automation & Computing Framework</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">IL</div>
+      <div>
+        <strong>Ironline</strong>
+        <small>Automation & Computing</small>
+      </div>
+    </div>
+
+    <nav id="nav">
+      <button class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-view="scheduler">
+        <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>
+        <span>Scheduler</span>
+      </button>
+      <button class="nav-item" data-view="processes">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <span>Processes</span>
+      </button>
+      <button class="nav-item" data-view="alerts">
+        <svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>
+        <span>Alerts</span>
+        <b class="badge" id="alertBadge" hidden>0</b>
+      </button>
+      <button class="nav-item" data-view="concepts">
+        <svg viewBox="0 0 24 24"><path d="M4 4h12a4 4 0 014 4v12H8a4 4 0 01-4-4z"/><path d="M8 8h8M8 12h8"/></svg>
+        <span>Concepts</span>
+      </button>
+    </nav>
+
+    <div class="side-foot">
+      <div class="sys"><i id="statusDot"></i><span id="systemStatus">SYSTEM OFFLINE</span></div>
+      <small>Policy: <b id="policyName">Priority</b></small>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div>
+        <h1 id="viewTitle">Dashboard</h1>
+        <p id="viewSub">Live plant overview</p>
+      </div>
+      <div class="controls">
+        <span class="clock" id="clock">--:--:--</span>
+        <button class="btn primary" id="btnStart">Start</button>
+        <button class="btn" id="btnStop" disabled>Stop</button>
+        <button class="btn danger" id="btnEmergency">Emergency drill</button>
+      </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="stats">
+        <div class="stat"><small>Uptime</small><b id="uptime">00:00</b></div>
+        <div class="stat"><small>Active processes</small><b id="activeProcesses">0</b></div>
+        <div class="stat"><small>Completed tasks</small><b id="completedTasks">0</b></div>
+        <div class="stat"><small>Worker round-trip</small><b id="responseTime">-- ms</b></div>
+      </div>
+
+      <h2>Live sensors</h2>
+      <div class="sensor-grid" id="sensorGrid"></div>
+
+      <div class="grid3">
+        <article class="card">
+          <h3>Plant health</h3>
+          <div class="health"><b id="healthScore">--</b><span class="risk" id="riskBadge">IDLE</span></div>
+          <div class="bar"><i id="healthBar"></i></div>
+          <p class="note" id="trendText">Waiting for sensor data.</p>
+          <ul class="reasons" id="reasons"></ul>
+        </article>
+
+        <article class="card">
+          <h3>CPU utilisation</h3>
+          <div class="health"><b id="cpuUsage">0%</b><small>4 cores</small></div>
+          <div class="bar"><i id="cpuBar"></i></div>
+          <div class="cores-mini" id="coresMini"></div>
+        </article>
+
+        <article class="card">
+          <h3>Recent alerts</h3>
+          <ul class="alerts" id="recentAlerts"></ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- SCHEDULER -->
+    <section class="view" id="view-scheduler">
+      <div class="card row-controls">
+        <label>Scheduling policy
+          <select id="algo">
+            <option value="priority">Priority (with aging)</option>
+            <option value="rr">Round Robin</option>
+            <option value="fcfs">First Come First Served</option>
+          </select>
+        </label>
+        <label>Time quantum
+          <input type="number" id="quantum" min="1" max="6" value="3" disabled>
+        </label>
+        <div class="mutex">
+          <small>Actuator mutex</small>
+          <b id="mutexState" class="free">FREE</b>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Core activity <small>one tick = 600 ms</small></h3>
+        <div id="coreList" class="core-list"></div>
+      </div>
+
+      <div class="card">
+        <h3>Gantt chart <small>last 40 ticks, colour = process</small></h3>
+        <div id="gantt" class="gantt"></div>
+      </div>
+
+      <div class="card">
+        <h3>Ready queue <small>next to be dispatched, left to right</small></h3>
+        <div id="queue" class="queue"></div>
+      </div>
+    </section>
+
+    <!-- PROCESSES -->
+    <section class="view" id="view-processes">
+      <div class="card">
+        <div class="card-head">
+          <h3>Process table</h3>
+          <div>
+            <button class="btn small" id="btnAdd">Add random process</button>
+            <button class="btn small" id="btnClean">Clear finished</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>PID</th><th>Name</th><th>Priority</th><th>Burst</th><th>Progress</th><th>State</th><th>Core</th><th>Waited</th></tr></thead>
+            <tbody id="processTable"></tbody>
+          </table>
+        </div>
+        <p class="note">Priority 1 is the highest. Processes tagged <em class="lk">mutex</em> need exclusive access to the actuator.</p>
+      </div>
+    </section>
+
+    <!-- ALERTS -->
+    <section class="view" id="view-alerts">
+      <div class="card">
+        <div class="card-head">
+          <h3>Event log</h3>
+          <div>
+            <select id="alertFilter">
+              <option value="all">All events</option>
+              <option value="crit">Critical</option>
+              <option value="warn">Warning</option>
+              <option value="info">Info</option>
+            </select>
+            <button class="btn small" id="btnClearAlerts">Clear</button>
+          </div>
+        </div>
+        <ul class="alerts" id="alertLog"></ul>
+      </div>
+    </section>
+
+    <!-- CONCEPTS -->
+    <section class="view" id="view-concepts">
+      <div class="concepts">
+        <article class="card"><span class="tag-where">script.js · addProcess()</span><h3>Process management</h3><p>Every task is a process record with a PID, priority, burst time and a state that moves through READY, RUNNING, BLOCKED and COMPLETED. The process table is a simple Process Control Block list.</p></article>
+        <article class="card"><span class="tag-where">script.js · cores[]</span><h3>Thread simulation</h3><p>Four logical cores run in parallel. Each tick, every busy core advances its process by one time unit, and idle cores pull new work from the ready queue.</p></article>
+        <article class="card"><span class="tag-where">script.js · pickNext()</span><h3>CPU scheduling</h3><p>Three policies can be switched live: Priority, Round Robin with a quantum, and FCFS. Compare how the Gantt chart and waiting times change.</p></article>
+        <article class="card"><span class="tag-where">script.js · aging</span><h3>Priority and aging</h3><p>Low-priority tasks gain priority the longer they wait, so they do not starve behind a steady stream of urgent work.</p></article>
+        <article class="card"><span class="tag-where">worker.js</span><h3>Parallel processing</h3><p>Sensor analysis runs inside a Web Worker, a separate thread. The page stays responsive while the worker checks limits, trends and health score.</p></article>
+        <article class="card"><span class="tag-where">script.js · S.lock</span><h3>Synchronization</h3><p>Control processes need the actuator mutex. If another process holds it, they become BLOCKED until it is released, which prevents conflicting commands.</p></article>
+        <article class="card"><span class="tag-where">sensors + canvas</span><h3>Real-time monitoring</h3><p>Sensors are sampled every 2.5 seconds with threshold lines drawn on each graph. Crossing a limit raises an event in the log.</p></article>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+  </html>
